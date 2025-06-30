@@ -1,6 +1,6 @@
 {
   "bot-account": {
-    "username": "AFKBot", 
+    "username": "MSGboot", 
     "password": "",
     "type": "offline"
   },
@@ -26,7 +26,7 @@
 
     "anti-afk": {
       "enabled": true,
-      "sneak": true
+      "sneak": false
     },
 
     "chat-messages": {
@@ -35,9 +35,9 @@
       "repeat-delay": 60,
 
       "messages": [
-        "I'm a regular player",
-        "Subscibe To Tyrox!",
-        "I Like to Play Minecraft!"
+        "MSG is the best mincraft player",
+        "hi",
+        "kareem is bot 🤣"
       ]
     },
 
