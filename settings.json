@@ -1,6 +1,6 @@
 {
   "bot-account": {
-    "username": getNextUsername, 
+    "username": "getNextUsername", 
     "password": "",
     "type": "offline"
   },
