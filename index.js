@@ -9,17 +9,17 @@ app.get('/', (req, res) => res.send('Bot has arrived'));
 app.listen(8000, () => console.log('Server started'));
 
 let bot;
-const usernames = ['BotAlpha', 'BotBeta', 'BotGamma', 'BotDelta'];
-let currentIndex = 0;
-
-function getNextUsername() {
-  const name = usernames[currentIndex];
-  currentIndex = (currentIndex + 1) % usernames.length;
-  return name;
+function getRandomUsername() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Bot_${suffix}`;
 }
 
 function createBot() {
-  const username = getNextUsername(); // الحصول على اسم جديد للبوت
+  const username = getRandomUsername(); // <-- بدل getNextUsername
   console.log(`[INFO] Creating bot with username: ${username}`);
 
   bot = mineflayer.createBot({
