@@ -20,6 +20,12 @@ let bot;
 const usernames = ['BotAlpha', 'BotBeta', 'BotGamma', 'BotDelta']; // يمكنك وضع أسماء عشوائية أو توليدها
 let currentIndex = 0;
 
+function getNextUsername() {
+  const name = usernames[currentIndex];
+  currentIndex = (currentIndex + 1) % usernames.length;
+  return name;
+}
+const username = getNextUsername();
 function createBot() {
    const bot = mineflayer.createBot({
       username: config['bot-account']['username'],
