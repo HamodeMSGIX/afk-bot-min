@@ -1,10 +1,4 @@
 {
-  "bot-account": {
-    "username": "boot", 
-    "password": "",
-    "type": "offline"
-  },
-
   "server": {
     "ip": "MSGIX.aternos.me", 
     "port": 46091,   
