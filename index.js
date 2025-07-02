@@ -9,6 +9,8 @@ app.get('/', (req, res) => res.send('Bot has arrived'));
 app.listen(8000, () => console.log('Server started'));
 
 let bot;
+
+// توليد اسم عشوائي
 function getRandomUsername() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let suffix = '';
@@ -19,7 +21,7 @@ function getRandomUsername() {
 }
 
 function createBot() {
-  const username = getRandomUsername(); // <-- بدل getNextUsername
+  const username = getRandomUsername();
   console.log(`[INFO] Creating bot with username: ${username}`);
 
   bot = mineflayer.createBot({
@@ -69,14 +71,14 @@ function createBot() {
   }
 
   bot.once('spawn', () => {
-    console.log('\x1b[33m[AfkBot] Bot joined the server', '\x1b[0m');
+    console.log('\x1b[33m[AfkBot] Bot joined the server\x1b[0m');
 
     if (config.utils['auto-auth'].enabled) {
       const password = config.utils['auto-auth'].password;
       pendingPromise = pendingPromise
         .then(() => sendRegister(password))
         .then(() => sendLogin(password))
-        .catch(error => console.error('[ERROR]', error));
+        .catch(error => console.error(`\x1b[31m[ERROR] ${error}\x1b[0m`));
     }
 
     if (config.utils['chat-messages'].enabled) {
@@ -107,7 +109,7 @@ function createBot() {
   });
 
   bot.on('goal_reached', () => {
-    console.log(`\x1b[32m[AfkBot] Bot arrived at target location. ${bot.entity.position}\x1b[0m`);
+    console.log(`\x1b[32m[AfkBot] Bot arrived at target location: ${bot.entity.position}\x1b[0m`);
   });
 
   bot.on('death', () => {
@@ -121,19 +123,19 @@ function createBot() {
   }
 
   bot.on('kicked', reason => {
-    console.log('\x1b[33m', `[AfkBot] Bot was kicked. Reason:\n${reason}`, '\x1b[0m');
+    console.log(`\x1b[33m[AfkBot] Bot was kicked. Reason:\n${reason}\x1b[0m`);
   });
 
   bot.on('error', err => {
-    console.log(`\x1b[31m[ERROR] ${err.message}`, '\x1b[0m`);
+    console.log(`\x1b[31m[ERROR] ${err.message}\x1b[0m`);
   });
 }
 
-// أول تشغيل للبوت
+// تشغيل أول مرة
 createBot();
 
 // إعادة التشغيل كل دقيقة باسم جديد
 setInterval(() => {
-  console.log('Restarting bot with new username...');
-  if (bot) bot.quit(); // عند الخروج سيتم تشغيل بوت جديد من خلال bot.on('end')
+  console.log('[INFO] Restarting bot with new username...');
+  if (bot) bot.quit(); // هذا سيؤدي لتشغيل bot.on('end') تلقائيًا
 }, 60000); // كل 60 ثانية
