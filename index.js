@@ -25,16 +25,17 @@ function getNextUsername() {
   currentIndex = (currentIndex + 1) % usernames.length;
   return name;
 }
-const username = getNextUsername();
 function createBot() {
-   const bot = mineflayer.createBot({
+  function createBot() {
+   const username = getNextUsername(); // توليد اسم جديد كل مرة
+   console.log(`[INFO] Creating bot with username: ${username}`);
       username: config['bot-account']['username'],
       password: config['bot-account']['password'],
       auth: config['bot-account']['type'],
       host: config.server.ip,
       port: config.server.port,
       version: config.server.version,
-   });
+      });
 
    bot.loadPlugin(pathfinder);
    const mcData = require('minecraft-data')(bot.version);
