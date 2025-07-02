@@ -4,11 +4,12 @@
     "password": "123456",
     "type": "offline"
   },
-  "server": {
-    "ip": "localhost",
-    "port": 25565,
-    "version": "1.16.5"
+"server": {
+    "ip": "MSGIX.aternos.me", 
+    "port": 46091,   
+    "version": "1.12.2"   
   },
+
   "utils": {
     "auto-auth": {
       "enabled": true,
@@ -32,9 +33,9 @@
     "auto-recconect-delay": 5000
   },
   "position": {
-    "enabled": true,
-    "x": 10,
-    "y": 65,
-    "z": -5
+    "enabled": false,
+    "x": 0,
+    "y": 0,
+    "z": 0
   }
 }
