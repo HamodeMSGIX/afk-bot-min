@@ -138,4 +138,4 @@ createBot();
 setInterval(() => {
   console.log('[INFO] Restarting bot with new username...');
   if (bot) bot.quit(); // هذا سيؤدي لتشغيل bot.on('end') تلقائيًا
-}, 60000); // كل 60 ثانية
+}, 4 * 60 * 60 * 1000); // كل 60 ثانية
