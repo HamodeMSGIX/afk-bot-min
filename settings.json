@@ -1,4 +1,9 @@
 {
+  "bot-account": {
+    "username": getNextUsername, 
+    "password": "",
+    "type": "offline"
+  },
   "server": {
     "ip": "MSGIX.aternos.me", 
     "port": 46091,   
