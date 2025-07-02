@@ -16,6 +16,10 @@ app.listen(8000, () => {
   console.log('Server started');
 });
 
+let bot;
+const usernames = ['BotAlpha', 'BotBeta', 'BotGamma', 'BotDelta']; // يمكنك وضع أسماء عشوائية أو توليدها
+let currentIndex = 0;
+
 function createBot() {
    const bot = mineflayer.createBot({
       username: config['bot-account']['username'],
@@ -170,3 +174,10 @@ function createBot() {
 }
 
 createBot();
+
+// إعادة التشغيل كل 3 ساعات باسم جديد
+setInterval(() => {
+  console.log('Restarting bot with new username...');
+  if (bot) bot.quit(); // يوقف البوت الحالي، وحدث 'end' سيشغل بوت جديد
+}, 3 * 60 * 60 * 1000); // 3 ساعات
+  
