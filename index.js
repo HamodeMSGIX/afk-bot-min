@@ -134,8 +134,8 @@ function createBot() {
 // تشغيل أول مرة
 createBot();
 
-// إعادة التشغيل كل دقيقة باسم جديد
+// إعادة التشغيل كل ساعتين باسم جديد
 setInterval(() => {
   console.log('[INFO] Restarting bot with new username...');
   if (bot) bot.quit(); // هذا سيؤدي لتشغيل bot.on('end') تلقائيًا
-}, 4 * 60 * 60 * 1000); // كل 60 ثانية
+}, 2 * 60 * 60 * 1000); // ساعتين
