@@ -5,17 +5,17 @@
     "type": "offline"
   },
   "server": {
-    "ip": "localhost",
-    "port": 25565,
-    "version": "1.16.5"
+    "ip": "MSGIX.aternos.me",
+    "port": 46091,
+    "version": "1.21.5"
   },
   "utils": {
     "auto-auth": {
-      "enabled": true,
+      "enabled": false,
       "password": "123456"
     },
     "chat-messages": {
-      "enabled": true,
+      "enabled": false,
       "repeat": true,
       "repeat-delay": 30,
       "messages": [
