@@ -7,7 +7,7 @@
   "server": {
     "ip": "MSGIX.aternos.me",
     "port": 46091,
-    "version": "1.21.6"
+    "version": "1.21.5"
   },
   "utils": {
     "auto-auth": {
