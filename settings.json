@@ -13,7 +13,7 @@
   "utils": {
     "auto-auth": {
       "enabled": false,
-      "password": "1.21.6"
+      "password": "1.21.5"
     },
     "chat-messages": {
       "enabled": false,
