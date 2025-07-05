@@ -7,7 +7,7 @@
   "server": {
     "ip": "MSGIX.aternos.me",
     "port": 46091,
-    "version": "1.19.4"  // تأكد أن السيرفر يسمح بإصدار أقدم
+    "version": "1.19.4"
   },
   "utils": {
     "auto-auth": {
