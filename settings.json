@@ -7,7 +7,7 @@
 "server": {
     "ip": "MSGIX.aternos.me", 
     "port": 46091,   
-    "version": ""   
+    "version": "1.21"   
   },
 
   "utils": {
