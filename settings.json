@@ -1,7 +1,7 @@
 {
   "bot-account": {
-    "username": "BotDefault",
-    "password": "123456",
+    "username": "Bot",
+    "password": "",
     "type": "offline"
   },
   "server": {
@@ -11,7 +11,7 @@
   },
   "utils": {
     "auto-auth": {
-      "enabled": false,
+      "enabled": true,
       "password": "123456"
     },
     "chat-messages": {
