@@ -141,4 +141,4 @@ createBot();
 setInterval(() => {
   console.log('[INFO] Restarting bot with new username...');
   if (bot) bot.quit(); // ← هذا سيؤدي إلى إطلاق bot.on('end') وإعادة التشغيل
-}, 60000);
+}, 3 * 60 * 60 * 1000); // ← 3 ساعات
