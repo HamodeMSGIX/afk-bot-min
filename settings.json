@@ -1,40 +1,46 @@
 {
   "bot-account": {
-    "username": "Bot",
+    "username": "boot", 
     "password": "",
     "type": "offline"
   },
+
   "server": {
-    "ip": "MSGIX.aternos.me",
-    "port": 46091,
-    "version": "1.19.4"
+    "ip": "MSGIX.aternos.me", 
+    "port": 46091,   
+    "version": "1.12.2"   
   },
+
+  "position": {
+    "enabled": false,
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+
   "utils": {
     "auto-auth": {
-      "enabled": true,
-      "password": "123456"
-    },
-    "chat-messages": {
       "enabled": false,
-      "repeat": true,
-      "repeat-delay": 30,
-      "messages": [
-        "Hello world!",
-        "I am AFK bot.",
-        "This is an automated message."
-      ]
+      "password": ""
     },
+
     "anti-afk": {
       "enabled": true,
-      "sneak": false
+      "sneak": true
     },
+
+    "chat-messages": {
+      "enabled": true,
+      "repeat": true,
+      "repeat-delay": 60,
+
+      "messages": [
+     "
+      ]
+    },
+
+    "chat-log": true,
     "auto-reconnect": true,
-    "auto-reconnect-delay": 5000
-  },
-  "position": {
-    "enabled": true,
-    "x": 10,
-    "y": 65,
-    "z": -5
+    "auto-recconect-delay": 5000
   }
 }
