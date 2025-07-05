@@ -1,5 +1,5 @@
 const mineflayer = require('mineflayer');
-const { Movements, pathfinder, goals } = require('mineflayer-pathfinder');
+const { pathfinder, goals } = require('mineflayer-pathfinder');
 const { GoalBlock } = goals;
 const config = require('./settings.json');
 const express = require('express');
@@ -10,7 +10,7 @@ app.listen(8000, () => console.log('Server started'));
 
 let bot;
 
-// توليد اسم عشوائي
+// توليد اسم عشوائي للبوت
 function getRandomUsername() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let suffix = '';
@@ -34,8 +34,6 @@ function createBot() {
   });
 
   bot.loadPlugin(pathfinder);
-  const mcData = require('minecraft-data')(bot.version);
-  const defaultMove = new Movements(bot, mcData);
   bot.settings.colorsEnabled = false;
 
   let pendingPromise = Promise.resolve();
@@ -72,6 +70,11 @@ function createBot() {
 
   bot.once('spawn', () => {
     console.log('\x1b[33m[AfkBot] Bot joined the server\x1b[0m');
+
+    // ← نقل هنا بعد spawn
+    const mcData = require('minecraft-data')(bot.version);
+    const { Movements } = require('mineflayer-pathfinder');
+    const defaultMove = new Movements(bot, mcData);
 
     if (config.utils['auto-auth'].enabled) {
       const password = config.utils['auto-auth'].password;
@@ -131,11 +134,1155 @@ function createBot() {
   });
 }
 
-// تشغيل أول مرة
+// تشغيل أول بوت
 createBot();
 
-// إعادة التشغيل كل ساعتين باسم جديد
+// إعادة التشغيل كل دقيقة باسم جديد
 setInterval(() => {
   console.log('[INFO] Restarting bot with new username...');
-  if (bot) bot.quit(); // هذا سيؤدي لتشغيل bot.on('end') تلقائيًا
-}, 2 * 60 * 60 * 1000); // ساعتين
+  if (bot) bot.quit(); // ← هذا سيؤدي إلى إطلاق bot.on('end') وإعادة التشغيل
+}, 60000);const mineflayer = require('mineflayer');
+const { pathfinder, goals } = require('mineflayer-pathfinder');
+const { GoalBlock } = goals;
+const config = require('./settings.json');
+const express = require('express');
+
+const app = express();
+app.get('/', (req, res) => res.send('Bot has arrived'));
+app.listen(8000, () => console.log('Server started'));
+
+let bot;
+
+// توليد اسم عشوائي للبوت
+function getRandomUsername() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Bot_${suffix}`;
+}
+
+function createBot() {
+  const username = getRandomUsername();
+  console.log(`[INFO] Creating bot with username: ${username}`);
+
+  bot = mineflayer.createBot({
+    username: username,
+    password: config['bot-account']['password'],
+    auth: config['bot-account']['type'],
+    host: config.server.ip,
+    port: config.server.port,
+    version: config.server.version,
+  });
+
+  bot.loadPlugin(pathfinder);
+  bot.settings.colorsEnabled = false;
+
+  let pendingPromise = Promise.resolve();
+
+  function sendRegister(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/register ${password} ${password}`);
+      console.log(`[Auth] Sent /register command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully registered') || message.includes('already registered')) {
+          resolve();
+        } else {
+          reject(`Registration error: ${message}`);
+        }
+      });
+    });
+  }
+
+  function sendLogin(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/login ${password}`);
+      console.log(`[Auth] Sent /login command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully logged in')) {
+          resolve();
+        } else {
+          reject(`Login error: ${message}`);
+        }
+      });
+    });
+  }
+
+  bot.once('spawn', () => {
+    console.log('\x1b[33m[AfkBot] Bot joined the server\x1b[0m');
+
+    // ← نقل هنا بعد spawn
+    const mcData = require('minecraft-data')(bot.version);
+    const { Movements } = require('mineflayer-pathfinder');
+    const defaultMove = new Movements(bot, mcData);
+
+    if (config.utils['auto-auth'].enabled) {
+      const password = config.utils['auto-auth'].password;
+      pendingPromise = pendingPromise
+        .then(() => sendRegister(password))
+        .then(() => sendLogin(password))
+        .catch(error => console.error(`\x1b[31m[ERROR] ${error}\x1b[0m`));
+    }
+
+    if (config.utils['chat-messages'].enabled) {
+      const messages = config.utils['chat-messages']['messages'];
+      if (config.utils['chat-messages'].repeat) {
+        const delay = config.utils['chat-messages']['repeat-delay'];
+        let i = 0;
+        setInterval(() => {
+          bot.chat(messages[i]);
+          i = (i + 1) % messages.length;
+        }, delay * 1000);
+      } else {
+        messages.forEach(msg => bot.chat(msg));
+      }
+    }
+
+    const pos = config.position;
+    if (config.position.enabled) {
+      console.log(`\x1b[32m[Afk Bot] Moving to (${pos.x}, ${pos.y}, ${pos.z})\x1b[0m`);
+      bot.pathfinder.setMovements(defaultMove);
+      bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
+    }
+
+    if (config.utils['anti-afk'].enabled) {
+      bot.setControlState('jump', true);
+      if (config.utils['anti-afk'].sneak) bot.setControlState('sneak', true);
+    }
+  });
+
+  bot.on('goal_reached', () => {
+    console.log(`\x1b[32m[AfkBot] Bot arrived at target location: ${bot.entity.position}\x1b[0m`);
+  });
+
+  bot.on('death', () => {
+    console.log(`\x1b[33m[AfkBot] Bot died. Respawned at ${bot.entity.position}\x1b[0m`);
+  });
+
+  if (config.utils['auto-reconnect']) {
+    bot.on('end', () => {
+      setTimeout(() => createBot(), config.utils['auto-recconect-delay']);
+    });
+  }
+
+  bot.on('kicked', reason => {
+    console.log(`\x1b[33m[AfkBot] Bot was kicked. Reason:\n${reason}\x1b[0m`);
+  });
+
+  bot.on('error', err => {
+    console.log(`\x1b[31m[ERROR] ${err.message}\x1b[0m`);
+  });
+}
+
+// تشغيل أول بوت
+createBot();
+
+// إعادة التشغيل كل دقيقة باسم جديد
+setInterval(() => {
+  console.log('[INFO] Restarting bot with new username...');
+  if (bot) bot.quit(); // ← هذا سيؤدي إلى إطلاق bot.on('end') وإعادة التشغيل
+}, 60000);const mineflayer = require('mineflayer');
+const { pathfinder, goals } = require('mineflayer-pathfinder');
+const { GoalBlock } = goals;
+const config = require('./settings.json');
+const express = require('express');
+
+const app = express();
+app.get('/', (req, res) => res.send('Bot has arrived'));
+app.listen(8000, () => console.log('Server started'));
+
+let bot;
+
+// توليد اسم عشوائي للبوت
+function getRandomUsername() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Bot_${suffix}`;
+}
+
+function createBot() {
+  const username = getRandomUsername();
+  console.log(`[INFO] Creating bot with username: ${username}`);
+
+  bot = mineflayer.createBot({
+    username: username,
+    password: config['bot-account']['password'],
+    auth: config['bot-account']['type'],
+    host: config.server.ip,
+    port: config.server.port,
+    version: config.server.version,
+  });
+
+  bot.loadPlugin(pathfinder);
+  bot.settings.colorsEnabled = false;
+
+  let pendingPromise = Promise.resolve();
+
+  function sendRegister(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/register ${password} ${password}`);
+      console.log(`[Auth] Sent /register command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully registered') || message.includes('already registered')) {
+          resolve();
+        } else {
+          reject(`Registration error: ${message}`);
+        }
+      });
+    });
+  }
+
+  function sendLogin(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/login ${password}`);
+      console.log(`[Auth] Sent /login command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully logged in')) {
+          resolve();
+        } else {
+          reject(`Login error: ${message}`);
+        }
+      });
+    });
+  }
+
+  bot.once('spawn', () => {
+    console.log('\x1b[33m[AfkBot] Bot joined the server\x1b[0m');
+
+    // ← نقل هنا بعد spawn
+    const mcData = require('minecraft-data')(bot.version);
+    const { Movements } = require('mineflayer-pathfinder');
+    const defaultMove = new Movements(bot, mcData);
+
+    if (config.utils['auto-auth'].enabled) {
+      const password = config.utils['auto-auth'].password;
+      pendingPromise = pendingPromise
+        .then(() => sendRegister(password))
+        .then(() => sendLogin(password))
+        .catch(error => console.error(`\x1b[31m[ERROR] ${error}\x1b[0m`));
+    }
+
+    if (config.utils['chat-messages'].enabled) {
+      const messages = config.utils['chat-messages']['messages'];
+      if (config.utils['chat-messages'].repeat) {
+        const delay = config.utils['chat-messages']['repeat-delay'];
+        let i = 0;
+        setInterval(() => {
+          bot.chat(messages[i]);
+          i = (i + 1) % messages.length;
+        }, delay * 1000);
+      } else {
+        messages.forEach(msg => bot.chat(msg));
+      }
+    }
+
+    const pos = config.position;
+    if (config.position.enabled) {
+      console.log(`\x1b[32m[Afk Bot] Moving to (${pos.x}, ${pos.y}, ${pos.z})\x1b[0m`);
+      bot.pathfinder.setMovements(defaultMove);
+      bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
+    }
+
+    if (config.utils['anti-afk'].enabled) {
+      bot.setControlState('jump', true);
+      if (config.utils['anti-afk'].sneak) bot.setControlState('sneak', true);
+    }
+  });
+
+  bot.on('goal_reached', () => {
+    console.log(`\x1b[32m[AfkBot] Bot arrived at target location: ${bot.entity.position}\x1b[0m`);
+  });
+
+  bot.on('death', () => {
+    console.log(`\x1b[33m[AfkBot] Bot died. Respawned at ${bot.entity.position}\x1b[0m`);
+  });
+
+  if (config.utils['auto-reconnect']) {
+    bot.on('end', () => {
+      setTimeout(() => createBot(), config.utils['auto-recconect-delay']);
+    });
+  }
+
+  bot.on('kicked', reason => {
+    console.log(`\x1b[33m[AfkBot] Bot was kicked. Reason:\n${reason}\x1b[0m`);
+  });
+
+  bot.on('error', err => {
+    console.log(`\x1b[31m[ERROR] ${err.message}\x1b[0m`);
+  });
+}
+
+// تشغيل أول بوت
+createBot();
+
+// إعادة التشغيل كل دقيقة باسم جديد
+setInterval(() => {
+  console.log('[INFO] Restarting bot with new username...');
+  if (bot) bot.quit(); // ← هذا سيؤدي إلى إطلاق bot.on('end') وإعادة التشغيل
+}, 60000);const mineflayer = require('mineflayer');
+const { pathfinder, goals } = require('mineflayer-pathfinder');
+const { GoalBlock } = goals;
+const config = require('./settings.json');
+const express = require('express');
+
+const app = express();
+app.get('/', (req, res) => res.send('Bot has arrived'));
+app.listen(8000, () => console.log('Server started'));
+
+let bot;
+
+// توليد اسم عشوائي للبوت
+function getRandomUsername() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Bot_${suffix}`;
+}
+
+function createBot() {
+  const username = getRandomUsername();
+  console.log(`[INFO] Creating bot with username: ${username}`);
+
+  bot = mineflayer.createBot({
+    username: username,
+    password: config['bot-account']['password'],
+    auth: config['bot-account']['type'],
+    host: config.server.ip,
+    port: config.server.port,
+    version: config.server.version,
+  });
+
+  bot.loadPlugin(pathfinder);
+  bot.settings.colorsEnabled = false;
+
+  let pendingPromise = Promise.resolve();
+
+  function sendRegister(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/register ${password} ${password}`);
+      console.log(`[Auth] Sent /register command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully registered') || message.includes('already registered')) {
+          resolve();
+        } else {
+          reject(`Registration error: ${message}`);
+        }
+      });
+    });
+  }
+
+  function sendLogin(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/login ${password}`);
+      console.log(`[Auth] Sent /login command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully logged in')) {
+          resolve();
+        } else {
+          reject(`Login error: ${message}`);
+        }
+      });
+    });
+  }
+
+  bot.once('spawn', () => {
+    console.log('\x1b[33m[AfkBot] Bot joined the server\x1b[0m');
+
+    // ← نقل هنا بعد spawn
+    const mcData = require('minecraft-data')(bot.version);
+    const { Movements } = require('mineflayer-pathfinder');
+    const defaultMove = new Movements(bot, mcData);
+
+    if (config.utils['auto-auth'].enabled) {
+      const password = config.utils['auto-auth'].password;
+      pendingPromise = pendingPromise
+        .then(() => sendRegister(password))
+        .then(() => sendLogin(password))
+        .catch(error => console.error(`\x1b[31m[ERROR] ${error}\x1b[0m`));
+    }
+
+    if (config.utils['chat-messages'].enabled) {
+      const messages = config.utils['chat-messages']['messages'];
+      if (config.utils['chat-messages'].repeat) {
+        const delay = config.utils['chat-messages']['repeat-delay'];
+        let i = 0;
+        setInterval(() => {
+          bot.chat(messages[i]);
+          i = (i + 1) % messages.length;
+        }, delay * 1000);
+      } else {
+        messages.forEach(msg => bot.chat(msg));
+      }
+    }
+
+    const pos = config.position;
+    if (config.position.enabled) {
+      console.log(`\x1b[32m[Afk Bot] Moving to (${pos.x}, ${pos.y}, ${pos.z})\x1b[0m`);
+      bot.pathfinder.setMovements(defaultMove);
+      bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
+    }
+
+    if (config.utils['anti-afk'].enabled) {
+      bot.setControlState('jump', true);
+      if (config.utils['anti-afk'].sneak) bot.setControlState('sneak', true);
+    }
+  });
+
+  bot.on('goal_reached', () => {
+    console.log(`\x1b[32m[AfkBot] Bot arrived at target location: ${bot.entity.position}\x1b[0m`);
+  });
+
+  bot.on('death', () => {
+    console.log(`\x1b[33m[AfkBot] Bot died. Respawned at ${bot.entity.position}\x1b[0m`);
+  });
+
+  if (config.utils['auto-reconnect']) {
+    bot.on('end', () => {
+      setTimeout(() => createBot(), config.utils['auto-recconect-delay']);
+    });
+  }
+
+  bot.on('kicked', reason => {
+    console.log(`\x1b[33m[AfkBot] Bot was kicked. Reason:\n${reason}\x1b[0m`);
+  });
+
+  bot.on('error', err => {
+    console.log(`\x1b[31m[ERROR] ${err.message}\x1b[0m`);
+  });
+}
+
+// تشغيل أول بوت
+createBot();
+
+// إعادة التشغيل كل دقيقة باسم جديد
+setInterval(() => {
+  console.log('[INFO] Restarting bot with new username...');
+  if (bot) bot.quit(); // ← هذا سيؤدي إلى إطلاق bot.on('end') وإعادة التشغيل
+}, 60000);const mineflayer = require('mineflayer');
+const { pathfinder, goals } = require('mineflayer-pathfinder');
+const { GoalBlock } = goals;
+const config = require('./settings.json');
+const express = require('express');
+
+const app = express();
+app.get('/', (req, res) => res.send('Bot has arrived'));
+app.listen(8000, () => console.log('Server started'));
+
+let bot;
+
+// توليد اسم عشوائي للبوت
+function getRandomUsername() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Bot_${suffix}`;
+}
+
+function createBot() {
+  const username = getRandomUsername();
+  console.log(`[INFO] Creating bot with username: ${username}`);
+
+  bot = mineflayer.createBot({
+    username: username,
+    password: config['bot-account']['password'],
+    auth: config['bot-account']['type'],
+    host: config.server.ip,
+    port: config.server.port,
+    version: config.server.version,
+  });
+
+  bot.loadPlugin(pathfinder);
+  bot.settings.colorsEnabled = false;
+
+  let pendingPromise = Promise.resolve();
+
+  function sendRegister(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/register ${password} ${password}`);
+      console.log(`[Auth] Sent /register command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully registered') || message.includes('already registered')) {
+          resolve();
+        } else {
+          reject(`Registration error: ${message}`);
+        }
+      });
+    });
+  }
+
+  function sendLogin(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/login ${password}`);
+      console.log(`[Auth] Sent /login command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully logged in')) {
+          resolve();
+        } else {
+          reject(`Login error: ${message}`);
+        }
+      });
+    });
+  }
+
+  bot.once('spawn', () => {
+    console.log('\x1b[33m[AfkBot] Bot joined the server\x1b[0m');
+
+    // ← نقل هنا بعد spawn
+    const mcData = require('minecraft-data')(bot.version);
+    const { Movements } = require('mineflayer-pathfinder');
+    const defaultMove = new Movements(bot, mcData);
+
+    if (config.utils['auto-auth'].enabled) {
+      const password = config.utils['auto-auth'].password;
+      pendingPromise = pendingPromise
+        .then(() => sendRegister(password))
+        .then(() => sendLogin(password))
+        .catch(error => console.error(`\x1b[31m[ERROR] ${error}\x1b[0m`));
+    }
+
+    if (config.utils['chat-messages'].enabled) {
+      const messages = config.utils['chat-messages']['messages'];
+      if (config.utils['chat-messages'].repeat) {
+        const delay = config.utils['chat-messages']['repeat-delay'];
+        let i = 0;
+        setInterval(() => {
+          bot.chat(messages[i]);
+          i = (i + 1) % messages.length;
+        }, delay * 1000);
+      } else {
+        messages.forEach(msg => bot.chat(msg));
+      }
+    }
+
+    const pos = config.position;
+    if (config.position.enabled) {
+      console.log(`\x1b[32m[Afk Bot] Moving to (${pos.x}, ${pos.y}, ${pos.z})\x1b[0m`);
+      bot.pathfinder.setMovements(defaultMove);
+      bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
+    }
+
+    if (config.utils['anti-afk'].enabled) {
+      bot.setControlState('jump', true);
+      if (config.utils['anti-afk'].sneak) bot.setControlState('sneak', true);
+    }
+  });
+
+  bot.on('goal_reached', () => {
+    console.log(`\x1b[32m[AfkBot] Bot arrived at target location: ${bot.entity.position}\x1b[0m`);
+  });
+
+  bot.on('death', () => {
+    console.log(`\x1b[33m[AfkBot] Bot died. Respawned at ${bot.entity.position}\x1b[0m`);
+  });
+
+  if (config.utils['auto-reconnect']) {
+    bot.on('end', () => {
+      setTimeout(() => createBot(), config.utils['auto-recconect-delay']);
+    });
+  }
+
+  bot.on('kicked', reason => {
+    console.log(`\x1b[33m[AfkBot] Bot was kicked. Reason:\n${reason}\x1b[0m`);
+  });
+
+  bot.on('error', err => {
+    console.log(`\x1b[31m[ERROR] ${err.message}\x1b[0m`);
+  });
+}
+
+// تشغيل أول بوت
+createBot();
+
+// إعادة التشغيل كل دقيقة باسم جديد
+setInterval(() => {
+  console.log('[INFO] Restarting bot with new username...');
+  if (bot) bot.quit(); // ← هذا سيؤدي إلى إطلاق bot.on('end') وإعادة التشغيل
+}, 60000);const mineflayer = require('mineflayer');
+const { pathfinder, goals } = require('mineflayer-pathfinder');
+const { GoalBlock } = goals;
+const config = require('./settings.json');
+const express = require('express');
+
+const app = express();
+app.get('/', (req, res) => res.send('Bot has arrived'));
+app.listen(8000, () => console.log('Server started'));
+
+let bot;
+
+// توليد اسم عشوائي للبوت
+function getRandomUsername() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Bot_${suffix}`;
+}
+
+function createBot() {
+  const username = getRandomUsername();
+  console.log(`[INFO] Creating bot with username: ${username}`);
+
+  bot = mineflayer.createBot({
+    username: username,
+    password: config['bot-account']['password'],
+    auth: config['bot-account']['type'],
+    host: config.server.ip,
+    port: config.server.port,
+    version: config.server.version,
+  });
+
+  bot.loadPlugin(pathfinder);
+  bot.settings.colorsEnabled = false;
+
+  let pendingPromise = Promise.resolve();
+
+  function sendRegister(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/register ${password} ${password}`);
+      console.log(`[Auth] Sent /register command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully registered') || message.includes('already registered')) {
+          resolve();
+        } else {
+          reject(`Registration error: ${message}`);
+        }
+      });
+    });
+  }
+
+  function sendLogin(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/login ${password}`);
+      console.log(`[Auth] Sent /login command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully logged in')) {
+          resolve();
+        } else {
+          reject(`Login error: ${message}`);
+        }
+      });
+    });
+  }
+
+  bot.once('spawn', () => {
+    console.log('\x1b[33m[AfkBot] Bot joined the server\x1b[0m');
+
+    // ← نقل هنا بعد spawn
+    const mcData = require('minecraft-data')(bot.version);
+    const { Movements } = require('mineflayer-pathfinder');
+    const defaultMove = new Movements(bot, mcData);
+
+    if (config.utils['auto-auth'].enabled) {
+      const password = config.utils['auto-auth'].password;
+      pendingPromise = pendingPromise
+        .then(() => sendRegister(password))
+        .then(() => sendLogin(password))
+        .catch(error => console.error(`\x1b[31m[ERROR] ${error}\x1b[0m`));
+    }
+
+    if (config.utils['chat-messages'].enabled) {
+      const messages = config.utils['chat-messages']['messages'];
+      if (config.utils['chat-messages'].repeat) {
+        const delay = config.utils['chat-messages']['repeat-delay'];
+        let i = 0;
+        setInterval(() => {
+          bot.chat(messages[i]);
+          i = (i + 1) % messages.length;
+        }, delay * 1000);
+      } else {
+        messages.forEach(msg => bot.chat(msg));
+      }
+    }
+
+    const pos = config.position;
+    if (config.position.enabled) {
+      console.log(`\x1b[32m[Afk Bot] Moving to (${pos.x}, ${pos.y}, ${pos.z})\x1b[0m`);
+      bot.pathfinder.setMovements(defaultMove);
+      bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
+    }
+
+    if (config.utils['anti-afk'].enabled) {
+      bot.setControlState('jump', true);
+      if (config.utils['anti-afk'].sneak) bot.setControlState('sneak', true);
+    }
+  });
+
+  bot.on('goal_reached', () => {
+    console.log(`\x1b[32m[AfkBot] Bot arrived at target location: ${bot.entity.position}\x1b[0m`);
+  });
+
+  bot.on('death', () => {
+    console.log(`\x1b[33m[AfkBot] Bot died. Respawned at ${bot.entity.position}\x1b[0m`);
+  });
+
+  if (config.utils['auto-reconnect']) {
+    bot.on('end', () => {
+      setTimeout(() => createBot(), config.utils['auto-recconect-delay']);
+    });
+  }
+
+  bot.on('kicked', reason => {
+    console.log(`\x1b[33m[AfkBot] Bot was kicked. Reason:\n${reason}\x1b[0m`);
+  });
+
+  bot.on('error', err => {
+    console.log(`\x1b[31m[ERROR] ${err.message}\x1b[0m`);
+  });
+}
+
+// تشغيل أول بوت
+createBot();
+
+// إعادة التشغيل كل دقيقة باسم جديد
+setInterval(() => {
+  console.log('[INFO] Restarting bot with new username...');
+  if (bot) bot.quit(); // ← هذا سيؤدي إلى إطلاق bot.on('end') وإعادة التشغيل
+}, 60000);const mineflayer = require('mineflayer');
+const { pathfinder, goals } = require('mineflayer-pathfinder');
+const { GoalBlock } = goals;
+const config = require('./settings.json');
+const express = require('express');
+
+const app = express();
+app.get('/', (req, res) => res.send('Bot has arrived'));
+app.listen(8000, () => console.log('Server started'));
+
+let bot;
+
+// توليد اسم عشوائي للبوت
+function getRandomUsername() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Bot_${suffix}`;
+}
+
+function createBot() {
+  const username = getRandomUsername();
+  console.log(`[INFO] Creating bot with username: ${username}`);
+
+  bot = mineflayer.createBot({
+    username: username,
+    password: config['bot-account']['password'],
+    auth: config['bot-account']['type'],
+    host: config.server.ip,
+    port: config.server.port,
+    version: config.server.version,
+  });
+
+  bot.loadPlugin(pathfinder);
+  bot.settings.colorsEnabled = false;
+
+  let pendingPromise = Promise.resolve();
+
+  function sendRegister(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/register ${password} ${password}`);
+      console.log(`[Auth] Sent /register command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully registered') || message.includes('already registered')) {
+          resolve();
+        } else {
+          reject(`Registration error: ${message}`);
+        }
+      });
+    });
+  }
+
+  function sendLogin(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/login ${password}`);
+      console.log(`[Auth] Sent /login command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully logged in')) {
+          resolve();
+        } else {
+          reject(`Login error: ${message}`);
+        }
+      });
+    });
+  }
+
+  bot.once('spawn', () => {
+    console.log('\x1b[33m[AfkBot] Bot joined the server\x1b[0m');
+
+    // ← نقل هنا بعد spawn
+    const mcData = require('minecraft-data')(bot.version);
+    const { Movements } = require('mineflayer-pathfinder');
+    const defaultMove = new Movements(bot, mcData);
+
+    if (config.utils['auto-auth'].enabled) {
+      const password = config.utils['auto-auth'].password;
+      pendingPromise = pendingPromise
+        .then(() => sendRegister(password))
+        .then(() => sendLogin(password))
+        .catch(error => console.error(`\x1b[31m[ERROR] ${error}\x1b[0m`));
+    }
+
+    if (config.utils['chat-messages'].enabled) {
+      const messages = config.utils['chat-messages']['messages'];
+      if (config.utils['chat-messages'].repeat) {
+        const delay = config.utils['chat-messages']['repeat-delay'];
+        let i = 0;
+        setInterval(() => {
+          bot.chat(messages[i]);
+          i = (i + 1) % messages.length;
+        }, delay * 1000);
+      } else {
+        messages.forEach(msg => bot.chat(msg));
+      }
+    }
+
+    const pos = config.position;
+    if (config.position.enabled) {
+      console.log(`\x1b[32m[Afk Bot] Moving to (${pos.x}, ${pos.y}, ${pos.z})\x1b[0m`);
+      bot.pathfinder.setMovements(defaultMove);
+      bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
+    }
+
+    if (config.utils['anti-afk'].enabled) {
+      bot.setControlState('jump', true);
+      if (config.utils['anti-afk'].sneak) bot.setControlState('sneak', true);
+    }
+  });
+
+  bot.on('goal_reached', () => {
+    console.log(`\x1b[32m[AfkBot] Bot arrived at target location: ${bot.entity.position}\x1b[0m`);
+  });
+
+  bot.on('death', () => {
+    console.log(`\x1b[33m[AfkBot] Bot died. Respawned at ${bot.entity.position}\x1b[0m`);
+  });
+
+  if (config.utils['auto-reconnect']) {
+    bot.on('end', () => {
+      setTimeout(() => createBot(), config.utils['auto-recconect-delay']);
+    });
+  }
+
+  bot.on('kicked', reason => {
+    console.log(`\x1b[33m[AfkBot] Bot was kicked. Reason:\n${reason}\x1b[0m`);
+  });
+
+  bot.on('error', err => {
+    console.log(`\x1b[31m[ERROR] ${err.message}\x1b[0m`);
+  });
+}
+
+// تشغيل أول بوت
+createBot();
+
+// إعادة التشغيل كل دقيقة باسم جديد
+setInterval(() => {
+  console.log('[INFO] Restarting bot with new username...');
+  if (bot) bot.quit(); // ← هذا سيؤدي إلى إطلاق bot.on('end') وإعادة التشغيل
+}, 60000);const mineflayer = require('mineflayer');
+const { pathfinder, goals } = require('mineflayer-pathfinder');
+const { GoalBlock } = goals;
+const config = require('./settings.json');
+const express = require('express');
+
+const app = express();
+app.get('/', (req, res) => res.send('Bot has arrived'));
+app.listen(8000, () => console.log('Server started'));
+
+let bot;
+
+// توليد اسم عشوائي للبوت
+function getRandomUsername() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Bot_${suffix}`;
+}
+
+function createBot() {
+  const username = getRandomUsername();
+  console.log(`[INFO] Creating bot with username: ${username}`);
+
+  bot = mineflayer.createBot({
+    username: username,
+    password: config['bot-account']['password'],
+    auth: config['bot-account']['type'],
+    host: config.server.ip,
+    port: config.server.port,
+    version: config.server.version,
+  });
+
+  bot.loadPlugin(pathfinder);
+  bot.settings.colorsEnabled = false;
+
+  let pendingPromise = Promise.resolve();
+
+  function sendRegister(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/register ${password} ${password}`);
+      console.log(`[Auth] Sent /register command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully registered') || message.includes('already registered')) {
+          resolve();
+        } else {
+          reject(`Registration error: ${message}`);
+        }
+      });
+    });
+  }
+
+  function sendLogin(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/login ${password}`);
+      console.log(`[Auth] Sent /login command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully logged in')) {
+          resolve();
+        } else {
+          reject(`Login error: ${message}`);
+        }
+      });
+    });
+  }
+
+  bot.once('spawn', () => {
+    console.log('\x1b[33m[AfkBot] Bot joined the server\x1b[0m');
+
+    // ← نقل هنا بعد spawn
+    const mcData = require('minecraft-data')(bot.version);
+    const { Movements } = require('mineflayer-pathfinder');
+    const defaultMove = new Movements(bot, mcData);
+
+    if (config.utils['auto-auth'].enabled) {
+      const password = config.utils['auto-auth'].password;
+      pendingPromise = pendingPromise
+        .then(() => sendRegister(password))
+        .then(() => sendLogin(password))
+        .catch(error => console.error(`\x1b[31m[ERROR] ${error}\x1b[0m`));
+    }
+
+    if (config.utils['chat-messages'].enabled) {
+      const messages = config.utils['chat-messages']['messages'];
+      if (config.utils['chat-messages'].repeat) {
+        const delay = config.utils['chat-messages']['repeat-delay'];
+        let i = 0;
+        setInterval(() => {
+          bot.chat(messages[i]);
+          i = (i + 1) % messages.length;
+        }, delay * 1000);
+      } else {
+        messages.forEach(msg => bot.chat(msg));
+      }
+    }
+
+    const pos = config.position;
+    if (config.position.enabled) {
+      console.log(`\x1b[32m[Afk Bot] Moving to (${pos.x}, ${pos.y}, ${pos.z})\x1b[0m`);
+      bot.pathfinder.setMovements(defaultMove);
+      bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
+    }
+
+    if (config.utils['anti-afk'].enabled) {
+      bot.setControlState('jump', true);
+      if (config.utils['anti-afk'].sneak) bot.setControlState('sneak', true);
+    }
+  });
+
+  bot.on('goal_reached', () => {
+    console.log(`\x1b[32m[AfkBot] Bot arrived at target location: ${bot.entity.position}\x1b[0m`);
+  });
+
+  bot.on('death', () => {
+    console.log(`\x1b[33m[AfkBot] Bot died. Respawned at ${bot.entity.position}\x1b[0m`);
+  });
+
+  if (config.utils['auto-reconnect']) {
+    bot.on('end', () => {
+      setTimeout(() => createBot(), config.utils['auto-recconect-delay']);
+    });
+  }
+
+  bot.on('kicked', reason => {
+    console.log(`\x1b[33m[AfkBot] Bot was kicked. Reason:\n${reason}\x1b[0m`);
+  });
+
+  bot.on('error', err => {
+    console.log(`\x1b[31m[ERROR] ${err.message}\x1b[0m`);
+  });
+}
+
+// تشغيل أول بوت
+createBot();
+
+// إعادة التشغيل كل دقيقة باسم جديد
+setInterval(() => {
+  console.log('[INFO] Restarting bot with new username...');
+  if (bot) bot.quit(); // ← هذا سيؤدي إلى إطلاق bot.on('end') وإعادة التشغيل
+}, 60000);const mineflayer = require('mineflayer');
+const { pathfinder, goals } = require('mineflayer-pathfinder');
+const { GoalBlock } = goals;
+const config = require('./settings.json');
+const express = require('express');
+
+const app = express();
+app.get('/', (req, res) => res.send('Bot has arrived'));
+app.listen(8000, () => console.log('Server started'));
+
+let bot;
+
+// توليد اسم عشوائي للبوت
+function getRandomUsername() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `Bot_${suffix}`;
+}
+
+function createBot() {
+  const username = getRandomUsername();
+  console.log(`[INFO] Creating bot with username: ${username}`);
+
+  bot = mineflayer.createBot({
+    username: username,
+    password: config['bot-account']['password'],
+    auth: config['bot-account']['type'],
+    host: config.server.ip,
+    port: config.server.port,
+    version: config.server.version,
+  });
+
+  bot.loadPlugin(pathfinder);
+  bot.settings.colorsEnabled = false;
+
+  let pendingPromise = Promise.resolve();
+
+  function sendRegister(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/register ${password} ${password}`);
+      console.log(`[Auth] Sent /register command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully registered') || message.includes('already registered')) {
+          resolve();
+        } else {
+          reject(`Registration error: ${message}`);
+        }
+      });
+    });
+  }
+
+  function sendLogin(password) {
+    return new Promise((resolve, reject) => {
+      bot.chat(`/login ${password}`);
+      console.log(`[Auth] Sent /login command.`);
+      bot.once('chat', (username, message) => {
+        console.log(`[ChatLog] <${username}> ${message}`);
+        if (message.includes('successfully logged in')) {
+          resolve();
+        } else {
+          reject(`Login error: ${message}`);
+        }
+      });
+    });
+  }
+
+  bot.once('spawn', () => {
+    console.log('\x1b[33m[AfkBot] Bot joined the server\x1b[0m');
+
+    // ← نقل هنا بعد spawn
+    const mcData = require('minecraft-data')(bot.version);
+    const { Movements } = require('mineflayer-pathfinder');
+    const defaultMove = new Movements(bot, mcData);
+
+    if (config.utils['auto-auth'].enabled) {
+      const password = config.utils['auto-auth'].password;
+      pendingPromise = pendingPromise
+        .then(() => sendRegister(password))
+        .then(() => sendLogin(password))
+        .catch(error => console.error(`\x1b[31m[ERROR] ${error}\x1b[0m`));
+    }
+
+    if (config.utils['chat-messages'].enabled) {
+      const messages = config.utils['chat-messages']['messages'];
+      if (config.utils['chat-messages'].repeat) {
+        const delay = config.utils['chat-messages']['repeat-delay'];
+        let i = 0;
+        setInterval(() => {
+          bot.chat(messages[i]);
+          i = (i + 1) % messages.length;
+        }, delay * 1000);
+      } else {
+        messages.forEach(msg => bot.chat(msg));
+      }
+    }
+
+    const pos = config.position;
+    if (config.position.enabled) {
+      console.log(`\x1b[32m[Afk Bot] Moving to (${pos.x}, ${pos.y}, ${pos.z})\x1b[0m`);
+      bot.pathfinder.setMovements(defaultMove);
+      bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
+    }
+
+    if (config.utils['anti-afk'].enabled) {
+      bot.setControlState('jump', true);
+      if (config.utils['anti-afk'].sneak) bot.setControlState('sneak', true);
+    }
+  });
+
+  bot.on('goal_reached', () => {
+    console.log(`\x1b[32m[AfkBot] Bot arrived at target location: ${bot.entity.position}\x1b[0m`);
+  });
+
+  bot.on('death', () => {
+    console.log(`\x1b[33m[AfkBot] Bot died. Respawned at ${bot.entity.position}\x1b[0m`);
+  });
+
+  if (config.utils['auto-reconnect']) {
+    bot.on('end', () => {
+      setTimeout(() => createBot(), config.utils['auto-recconect-delay']);
+    });
+  }
+
+  bot.on('kicked', reason => {
+    console.log(`\x1b[33m[AfkBot] Bot was kicked. Reason:\n${reason}\x1b[0m`);
+  });
+
+  bot.on('error', err => {
+    console.log(`\x1b[31m[ERROR] ${err.message}\x1b[0m`);
+  });
+}
+
+// تشغيل أول بوت
+createBot();
+
+// إعادة التشغيل كل دقيقة باسم جديد
+setInterval(() => {
+  console.log('[INFO] Restarting bot with new username...');
+  if (bot) bot.quit(); // ← هذا سيؤدي إلى إطلاق bot.on('end') وإعادة التشغيل
+}, 60000);
