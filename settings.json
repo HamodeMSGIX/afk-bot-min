@@ -7,13 +7,13 @@
 "server": {
     "ip": "MSGIX.aternos.me", 
     "port": 46091,   
-    "version": "1.21.5"   
+    "version": "1.21.4"   
   },
 
   "utils": {
     "auto-auth": {
       "enabled": false,
-      "password": "1.21.4"
+      "password": ""
     },
     "chat-messages": {
       "enabled": false,
