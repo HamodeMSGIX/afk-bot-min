@@ -1,0 +1,40 @@
+{
+  "bot-account": {
+    "username": "BotDefault",
+    "password": "123456",
+    "type": "offline"
+  },
+  "server": {
+    "ip": "localhost",
+    "port": 25565,
+    "version": "1.16.5"
+  },
+  "utils": {
+    "auto-auth": {
+      "enabled": true,
+      "password": "123456"
+    },
+    "chat-messages": {
+      "enabled": true,
+      "repeat": true,
+      "repeat-delay": 30,
+      "messages": [
+        "Hello world!",
+        "I am AFK bot.",
+        "This is an automated message."
+      ]
+    },
+    "anti-afk": {
+      "enabled": true,
+      "sneak": false
+    },
+    "auto-reconnect": true,
+    "auto-recconect-delay": 5000
+  },
+  "position": {
+    "enabled": true,
+    "x": 10,
+    "y": 65,
+    "z": -5
+  }
+}
